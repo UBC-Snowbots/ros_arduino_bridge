@@ -1,3 +1,8 @@
+SNOWBOTS MODIFICATION
+Modified encoder data in: `ros_arduino_firmware/src/libraries/ROSArduinoBridge`
+Note: the additional header file required for the modification must be placed where the Arduino IDE can find it. Globally this is in: /usr/share/arduino/libraries/digitalWriteFast_verA/digitalWriteFast_verA.h
+
+
 Overview
 --------
 This branch (indigo-devel) is intended for ROS Indigo and above, and uses the Catkin buildsystem. It may also be compatible with ROS Hydro.
