@@ -45,8 +45,8 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-//#define USE_BASE      // Enable the base controller code
-#undef USE_BASE     // Disable the base controller code
+#define USE_BASE      // Enable the base controller code
+//#undef USE_BASE     // Disable the base controller code
 
 /* Define the motor controller and encoder library you are using */
 #ifdef USE_BASE
@@ -57,17 +57,17 @@
    //#define POLOLU_MC33926
 
    /* The RoboGaia encoder shield */
-   #define ROBOGAIA
+   //#define ROBOGAIA
    
    /* Encoders directly attached to Arduino board */
-   //#define ARDUINO_ENC_COUNTER
+   #define ARDUINO_ENC_COUNTER
 #endif
 
-#define USE_SERVOS  // Enable use of PWM servos as defined in servos.h
-//#undef USE_SERVOS     // Disable use of PWM servos
+//#define USE_SERVOS  // Enable use of PWM servos as defined in servos.h
+#undef USE_SERVOS     // Disable use of PWM servos
 
 /* Serial port baud rate */
-#define BAUDRATE     57600
+#define BAUDRATE  57600
 
 /* Maximum PWM signal */
 #define MAX_PWM        255
@@ -77,6 +77,10 @@
 #else
 #include "WProgram.h"
 #endif
+
+#include "digitalWriteFast_verA.h"
+#include "Arduino.h"
+
 
 /* Include definition of serial commands */
 #include "commands.h"
@@ -92,13 +96,13 @@
 
 #ifdef USE_BASE
   /* Motor driver function definitions */
-  #include "motor_driver.h"
+  //#include "motor_driver.h"
 
   /* Encoder driver function definitions */
   #include "encoder_driver.h"
 
   /* PID parameters and functions */
-  #include "diff_controller.h"
+  //#include "diff_controller.h"
 
   /* Run the PID loop at 30 times per second */
   #define PID_RATE           30     // Hz
@@ -200,11 +204,11 @@ int runCommand() {
     break;
    case RESET_ENCODERS:
     resetEncoders();
-    resetPID();
+    //resetPID();
     Serial.println("OK");
     break;
-  case MOTOR_SPEEDS:
-    /* Reset the auto stop timer */
+  /*case MOTOR_SPEEDS:
+    /* Reset the auto stop timer 
     lastMotorCommand = millis();
     if (arg1 == 0 && arg2 == 0) {
       setMotorSpeeds(0, 0);
@@ -227,8 +231,10 @@ int runCommand() {
     Ko = pid_args[3];
     Serial.println("OK");
     break;
+    */
 #endif
   default:
+    Serial.println(cmd);
     Serial.println("Invalid Command");
     break;
   }
@@ -241,28 +247,22 @@ void setup() {
 // Initialize the motor controller if used */
 #ifdef USE_BASE
   #ifdef ARDUINO_ENC_COUNTER
-    //set as inputs
-    DDRD &= ~(1<<LEFT_ENC_PIN_A);
-    DDRD &= ~(1<<LEFT_ENC_PIN_B);
-    DDRC &= ~(1<<RIGHT_ENC_PIN_A);
-    DDRC &= ~(1<<RIGHT_ENC_PIN_B);
-    
-    //enable pull up resistors
-    PORTD |= (1<<LEFT_ENC_PIN_A);
-    PORTD |= (1<<LEFT_ENC_PIN_B);
-    PORTC |= (1<<RIGHT_ENC_PIN_A);
-    PORTC |= (1<<RIGHT_ENC_PIN_B);
-    
-    // tell pin change mask to listen to left encoder pins
-    PCMSK2 |= (1 << LEFT_ENC_PIN_A)|(1 << LEFT_ENC_PIN_B);
-    // tell pin change mask to listen to right encoder pins
-    PCMSK1 |= (1 << RIGHT_ENC_PIN_A)|(1 << RIGHT_ENC_PIN_B);
-    
-    // enable PCINT1 and PCINT2 interrupt in the general interrupt mask
-    PCICR |= (1 << PCIE1) | (1 << PCIE2);
+    // Left encoder
+    pinMode(c_LeftEncoderPinA, INPUT);      // sets pin A as input
+    digitalWrite(c_LeftEncoderPinA, LOW);  // turn on pullup resistors
+    pinMode(c_LeftEncoderPinB, INPUT);      // sets pin B as input
+    digitalWrite(c_LeftEncoderPinB, LOW);  // turn on pullup resistors
+    attachInterrupt(c_LeftEncoderInterrupt, HandleLeftMotorInterruptA, RISING);
+   
+    // Right encoder
+    pinMode(c_RightEncoderPinA, INPUT);      // sets pin A as input
+    digitalWrite(c_RightEncoderPinA, LOW);  // turn on pullup resistors
+    pinMode(c_RightEncoderPinB, INPUT);      // sets pin B as input
+    digitalWrite(c_RightEncoderPinB, LOW);  // turn on pullup resistors
+    attachInterrupt(c_RightEncoderInterrupt, HandleRightMotorInterruptA, RISING);
   #endif
-  initMotorController();
-  resetPID();
+  //initMotorController();
+  //resetPID();
 #endif
 
 /* Attach servos if used */
@@ -324,7 +324,7 @@ void loop() {
   
 // If we are using base control, run a PID calculation at the appropriate intervals
 #ifdef USE_BASE
-  if (millis() > nextPID) {
+  /*if (millis() > nextPID) {
     updatePID();
     nextPID += PID_INTERVAL;
   }
@@ -333,7 +333,7 @@ void loop() {
   if ((millis() - lastMotorCommand) > AUTO_STOP_INTERVAL) {;
     setMotorSpeeds(0, 0);
     moving = 0;
-  }
+  }*/
 #endif
 
 // Sweep servos
