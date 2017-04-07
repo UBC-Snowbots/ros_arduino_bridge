@@ -1,6 +1,7 @@
-SNOWBOTS MODIFICATION
-Modified encoder data in: `ros_arduino_firmware/src/libraries/ROSArduinoBridge`
-Note: the additional header file required for the modification must be placed where the Arduino IDE can find it. Globally this is in: /usr/share/arduino/libraries/digitalWriteFast_verA/digitalWriteFast_verA.h
+# SNOWBOTS MODIFICATIONS
+**Modified encoder data in:** `ros_arduino_firmware/src/libraries/ROSArduinoBridge`
+
+**Note:** the additional header file required for the modification must be placed where the Arduino IDE can find it. Globally this is in: /usr/share/arduino/libraries/digitalWriteFast_verA/digitalWriteFast_verA.h
 
 
 Overview
