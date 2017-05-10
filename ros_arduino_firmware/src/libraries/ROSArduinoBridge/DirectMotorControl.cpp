@@ -20,6 +20,7 @@ void DirectMotorControl::setLeftSpeed(int speed){
     servo_write(left_motor, speed);
 }
 
+
 void DirectMotorControl::setRightSpeed(int speed){
     servo_write(right_motor, speed);
 }
