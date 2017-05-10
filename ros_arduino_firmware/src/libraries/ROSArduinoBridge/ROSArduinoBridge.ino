@@ -62,11 +62,6 @@
    /* Motors directly attached to the Arduino board */
    #define MOTORS_DIRECTLY_ATTACHED
    
-   #ifdef MOTORS_DIRECTLY_ATTACHED
-     // Hack to import SoftwareSerial when we need it....
-     #include <SoftwareSerial.h>
-   #endif
-   
    /* Encoders directly attached to Arduino board */
    #define ARDUINO_ENC_COUNTER
 #endif
@@ -101,6 +96,11 @@
 #ifdef USE_SERVOS
    #include <Servo.h>
    #include "servos.h"
+#endif
+
+/* Include SoftwareSerial if required */
+#ifdef MOTORS_DIRECTLY_ATTACHED
+  #include <SoftwareSerial.h>
 #endif
 
 #ifdef USE_BASE
