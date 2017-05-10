@@ -51,13 +51,21 @@
 /* Define the motor controller and encoder library you are using */
 #ifdef USE_BASE
    /* The Pololu VNH5019 dual motor driver shield */
-   #define POLOLU_VNH5019
+   //#define POLOLU_VNH5019
 
    /* The Pololu MC33926 dual motor driver shield */
    //#define POLOLU_MC33926
 
    /* The RoboGaia encoder shield */
    //#define ROBOGAIA
+   
+   /* Motors directly attached to the Arduino board */
+   #define MOTORS_DIRECTLY_ATTACHED
+   
+   #ifdef MOTORS_DIRECTLY_ATTACHED
+     // Hack to import SoftwareSerial when we need it....
+     #include <SoftwareSerial.h>
+   #endif
    
    /* Encoders directly attached to Arduino board */
    #define ARDUINO_ENC_COUNTER
@@ -70,7 +78,7 @@
 #define BAUDRATE  57600
 
 /* Maximum PWM signal */
-#define MAX_PWM        255
+#define MAX_PWM        180
 
 #if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
@@ -78,6 +86,7 @@
 #include "WProgram.h"
 #endif
 
+/* Used to read encoders (added by UBC Snowbots) */
 #include "digitalWriteFast_verA.h"
 #include "Arduino.h"
 
@@ -96,13 +105,13 @@
 
 #ifdef USE_BASE
   /* Motor driver function definitions */
-  //#include "motor_driver.h"
+  #include "motor_driver.h"
 
   /* Encoder driver function definitions */
   #include "encoder_driver.h"
 
   /* PID parameters and functions */
-  //#include "diff_controller.h"
+  #include "diff_controller.h"
 
   /* Run the PID loop at 30 times per second */
   #define PID_RATE           30     // Hz
@@ -204,11 +213,11 @@ int runCommand() {
     break;
    case RESET_ENCODERS:
     resetEncoders();
-    //resetPID();
+    resetPID();
     Serial.println("OK");
     break;
-  /*case MOTOR_SPEEDS:
-    /* Reset the auto stop timer 
+  case MOTOR_SPEEDS:
+    // Reset the auto stop timer 
     lastMotorCommand = millis();
     if (arg1 == 0 && arg2 == 0) {
       setMotorSpeeds(0, 0);
@@ -231,7 +240,6 @@ int runCommand() {
     Ko = pid_args[3];
     Serial.println("OK");
     break;
-    */
 #endif
   default:
     Serial.println(cmd);
@@ -261,8 +269,8 @@ void setup() {
     digitalWrite(c_RightEncoderPinB, LOW);  // turn on pullup resistors
     attachInterrupt(c_RightEncoderInterrupt, HandleRightMotorInterruptA, RISING);
   #endif
-  //initMotorController();
-  //resetPID();
+  initMotorController();
+  resetPID();
 #endif
 
 /* Attach servos if used */
@@ -324,7 +332,7 @@ void loop() {
   
 // If we are using base control, run a PID calculation at the appropriate intervals
 #ifdef USE_BASE
-  /*if (millis() > nextPID) {
+  if (millis() > nextPID) {
     updatePID();
     nextPID += PID_INTERVAL;
   }
@@ -333,7 +341,7 @@ void loop() {
   if ((millis() - lastMotorCommand) > AUTO_STOP_INTERVAL) {;
     setMotorSpeeds(0, 0);
     moving = 0;
-  }*/
+  }
 #endif
 
 // Sweep servos

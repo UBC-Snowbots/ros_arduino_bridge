@@ -55,6 +55,32 @@
     setMotorSpeed(LEFT, leftSpeed);
     setMotorSpeed(RIGHT, rightSpeed);
   }
+  
+#elif defined MOTORS_DIRECTLY_ATTACHED
+  /* Include DirectMotorControl Library */
+  #include "DirectMotorControl.h"
+  
+  /* Create the motor driver object */
+  DirectMotorControl drive;
+  
+  /* Wrap the motor driver initialization */
+  void initMotorController(){
+    // This does nothing, all required setup 
+    // stuff is in the constructor
+  }
+  
+  /* Wrap the drive motor set speed function */
+  void setMotorSpeed(int i, int spd) {
+    if (i == LEFT) drive.setLeftSpeed(spd);
+    else drive.setRightSpeed(spd);
+  } 
+  
+   // A convenience function for setting both motor speeds
+  void setMotorSpeeds(int leftSpeed, int rightSpeed) {
+    setMotorSpeed(LEFT, leftSpeed);
+    setMotorSpeed(RIGHT, rightSpeed);
+  }
+
 #else
   #error A motor driver must be selected!
 #endif
