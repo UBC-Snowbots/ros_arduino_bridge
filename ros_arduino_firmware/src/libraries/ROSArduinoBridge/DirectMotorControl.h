@@ -13,18 +13,21 @@ public:
 
     // Set the speed of the left and right motors respectively
     void setLeftSpeed(int speed);
-    void setRightSpeed(int speed);
+    void setRightSpeed(int speed);   
+    
+    // Sets up everything
+    void init();
 
 private:
 
-    // Sets up everything
-    void init(int left_motor_pin, int right_motor_pin);
-
     // Writes given throttle command out to given motor
-    void servo_write(Servo motor, int throttle);
+    void servo_write(Servo& motor, int throttle);
 
+    // The left and right motor pins
+    int _left_motor_pin, _right_motor_pin;
+    
     // The left and right motors
-    Servo left_motor, right_motor;
+    Servo _left_motor, _right_motor;
 };
 
-#endif // DIRECTMOTORCONTROL_H
+#endif

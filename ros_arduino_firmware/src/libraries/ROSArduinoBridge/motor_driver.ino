@@ -65,12 +65,18 @@
   
   /* Wrap the motor driver initialization */
   void initMotorController(){
-    // This does nothing, all required setup 
-    // stuff is in the constructor
+    drive.init();
   }
   
   /* Wrap the drive motor set speed function */
   void setMotorSpeed(int i, int spd) {
+    // This driver only deals with values < 180 and > 0, where:
+    // > 90 : forward
+    // < 90 : backward
+    // = 90 : stopped
+    // so we set a MAX_PWM of 90, (which gives us a range of -90 to 90)
+    // and then add 90 to get the actual command here
+    spd += 90;
     if (i == LEFT) drive.setLeftSpeed(spd);
     else drive.setRightSpeed(spd);
   } 

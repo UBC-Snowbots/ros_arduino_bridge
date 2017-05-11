@@ -126,5 +126,7 @@ void updatePID() {
 
   /* Set the motor speeds accordingly */
   setMotorSpeeds(leftPID.output, rightPID.output);
+  
+  Serial.print(leftPID.output);Serial.print(" ");Serial.println(rightPID.output);
 }
 

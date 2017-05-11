@@ -73,7 +73,7 @@
 #define BAUDRATE  57600
 
 /* Maximum PWM signal */
-#define MAX_PWM        180
+#define MAX_PWM        90
 
 #if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
