@@ -14,7 +14,6 @@
   #define c_RightEncoderInterrupt 1
   #define c_RightEncoderPinA 3
   #define c_RightEncoderPinB 5
-  #define RightEncoderIsReversed
   
 #endif
    

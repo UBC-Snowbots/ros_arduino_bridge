@@ -36,7 +36,7 @@ SetPointInfo leftPID, rightPID;
 int Kp = 20;
 int Kd = 12;
 int Ki = 0;
-int Ko = 50;
+int Ko = 1000;
 
 unsigned char moving = 0; // is the base in motion?
 
@@ -127,6 +127,6 @@ void updatePID() {
   /* Set the motor speeds accordingly */
   setMotorSpeeds(leftPID.output, rightPID.output);
   
-  Serial.print(leftPID.output);Serial.print(" ");Serial.println(rightPID.output);
+  //Serial.print(leftPID.output);Serial.print(" ");Serial.println(rightPID.output);
 }
 
