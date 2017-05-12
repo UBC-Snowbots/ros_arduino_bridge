@@ -24,7 +24,9 @@ typedef struct {
   * see http://brettbeauregard.com/blog/2011/04/improving-the-beginner%E2%80%99s-pid-tuning-changes/
   */
   //int Ierror;
-  int ITerm;                    //integrated term
+  int PTerm;  // proportional term
+  int ITerm;  // integrated term
+  int DTerm;  // differential term
 
   long output;                    // last motor setting
 }
@@ -33,10 +35,10 @@ SetPointInfo;
 SetPointInfo leftPID, rightPID;
 
 /* PID Parameters */
-int Kp = 20;
+int Kp = 15;
 int Kd = 12;
-int Ki = 0;
-int Ko = 1000;
+int Ki = 10;
+int Ko = 100;
 
 unsigned char moving = 0; // is the base in motion?
 
@@ -73,8 +75,9 @@ void doPID(SetPointInfo * p) {
   //Perror = p->TargetTicksPerFrame - (p->Encoder - p->PrevEnc);
   input = p->Encoder - p->PrevEnc;
   Perror = p->TargetTicksPerFrame - input;
-
-
+  p->PTerm = Kp * Perror;
+  p->DTerm = Kd * (input - p->PrevInput);
+  
   /*
   * Avoid derivative kick and allow tuning changes,
   * see http://brettbeauregard.com/blog/2011/04/improving-the-beginner%E2%80%99s-pid-derivative-kick/
@@ -82,7 +85,8 @@ void doPID(SetPointInfo * p) {
   */
   //output = (Kp * Perror + Kd * (Perror - p->PrevErr) + Ki * p->Ierror) / Ko;
   // p->PrevErr = Perror;
-  output = (Kp * Perror - Kd * (input - p->PrevInput) + p->ITerm) / Ko;
+  //output = (Kp * Perror - Kd * (input - p->PrevInput) + p->ITerm) / Ko;
+  output = (p->PTerm - p->DTerm + p->ITerm) / Ko;
   p->PrevEnc = p->Encoder;
 
   output += p->output;
@@ -96,7 +100,7 @@ void doPID(SetPointInfo * p) {
   /*
   * allow turning changes, see http://brettbeauregard.com/blog/2011/04/improving-the-beginner%E2%80%99s-pid-tuning-changes/
   */
-    p->ITerm += Ki * Perror;
+  p->ITerm += Ki * Perror;
 
   p->output = output;
   p->PrevInput = input;

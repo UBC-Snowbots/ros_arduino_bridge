@@ -18,6 +18,9 @@
 #define UPDATE_PID     'u'
 #define DIGITAL_WRITE  'w'
 #define ANALOG_WRITE   'x'
+// The PWM values produced by the PID system for
+// the left and right wheels
+#define READ_PID_OUTPUT'z'
 #define LEFT            0
 #define RIGHT           1
 

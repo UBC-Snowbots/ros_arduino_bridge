@@ -263,6 +263,17 @@ class Arduino:
         except:
             return None
 
+    def get_pid_outputs(self):
+        ''' Get the computed P,I,D, terms and output PWM command
+            for both wheels
+        '''
+        values = self.execute_array('z')
+        if len(values) != 8:
+            raise SerialException
+            return None
+        else:
+            return values
+
     def get_encoder_counts(self):
         values = self.execute_array('e')
         if len(values) != 2:
@@ -280,6 +291,7 @@ class Arduino:
     def drive(self, right, left):
         ''' Speeds are given in encoder ticks per PID interval
         '''
+        #print(str(left) + " " + str(right))
         return self.execute_ack('m %d %d' %(right, left))
     
     def drive_m_per_s(self, right, left):

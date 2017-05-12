@@ -27,7 +27,9 @@ import os
 from math import sin, cos, pi
 from geometry_msgs.msg import Quaternion, Twist, Pose
 from nav_msgs.msg import Odometry
+from std_msgs.msg import Float32
 from tf.broadcaster import TransformBroadcaster
+from serial.serialutil import SerialException
  
 """ Class to receive Twist commands and publish Odometry data """
 class BaseController:
@@ -90,6 +92,29 @@ class BaseController:
         # Set up the odometry broadcaster
         self.odomPub = rospy.Publisher('odom', Odometry, queue_size=5)
         self.odomBroadcaster = TransformBroadcaster()
+
+        # Setup the PID component broadcasters
+        base_topic = "/arduino"
+        pid_side = "/left"
+        self.left_pid_pubs = dict()
+        self.left_pid_pubs['PTerm'] = \
+            rospy.Publisher(base_topic + pid_side + "/p_term", Float32, queue_size=5) 
+        self.left_pid_pubs['ITerm'] = \
+            rospy.Publisher(base_topic + pid_side + "/i_term", Float32, queue_size=5) 
+        self.left_pid_pubs['DTerm'] = \
+            rospy.Publisher(base_topic + pid_side + "/d_term", Float32, queue_size=5) 
+        self.left_pid_pubs['Output'] = \
+            rospy.Publisher(base_topic + pid_side + "/pid_output", Float32, queue_size=5) 
+        self.right_pid_pubs = dict()
+        pid_side = "/right"
+        self.right_pid_pubs['PTerm'] = \
+            rospy.Publisher(base_topic + pid_side + "/p_term", Float32, queue_size=5) 
+        self.right_pid_pubs['ITerm'] = \
+            rospy.Publisher(base_topic + pid_side + "/i_term", Float32 , queue_size=5) 
+        self.right_pid_pubs['DTerm'] = \
+            rospy.Publisher(base_topic + pid_side + "/d_term", Float32, queue_size=5) 
+        self.right_pid_pubs['Output'] = \
+            rospy.Publisher(base_topic + pid_side + "/pid_output", Float32, queue_size=5) 
         
         rospy.loginfo("Started base controller for a base of " + str(self.wheel_track) + "m wide with " + str(self.encoder_resolution) + " ticks per rev")
         rospy.loginfo("Publishing odometry data at: " + str(self.rate) + " Hz using " + str(self.base_frame) + " as base frame")
@@ -126,6 +151,21 @@ class BaseController:
             except:
                 self.bad_encoder_count += 1
                 rospy.logerr("Encoder exception count: " + str(self.bad_encoder_count))
+                return
+
+            # Read the PID terms and output
+            try:
+                pid_terms = self.arduino.get_pid_outputs()
+                self.left_pid_pubs['PTerm'].publish(pid_terms[0])
+                self.left_pid_pubs['ITerm'].publish(pid_terms[1])
+                self.left_pid_pubs['DTerm'].publish(pid_terms[2])
+                self.left_pid_pubs['Output'].publish(pid_terms[3])
+                self.right_pid_pubs['PTerm'].publish(pid_terms[4])
+                self.right_pid_pubs['ITerm'].publish(pid_terms[5])
+                self.right_pid_pubs['DTerm'].publish(pid_terms[6])
+                self.right_pid_pubs['Output'].publish(pid_terms[7])
+            except SerialException:
+                rospy.logerr("Could not read PID terms");
                 return
                             
             dt = now - self.then

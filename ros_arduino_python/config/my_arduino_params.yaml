@@ -3,7 +3,7 @@
 # For a wireless connection like XBee, the port is typically
 # /dev/ttyUSB# where # is a number such as 0, 1, 2, etc.
 
-port: /dev/ttyACM0
+port: /dev/ttyACM4
 baud: 57600
 timeout: 0.1
 
@@ -24,10 +24,10 @@ gear_reduction: 1.0
 motors_reversed: False
 
 # === PID parameters
-Kp: 10
-Kd: 12
-Ki: 25
-Ko: 100
+Kp: 100
+Kd: 0
+Ki: 32
+Ko: 40
 accel_limit: 1.0
 
 # === Sensor definitions.  Examples only - edit for your robot.

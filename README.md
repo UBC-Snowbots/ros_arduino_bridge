@@ -195,6 +195,7 @@ The list of commands can be found in the file commands.h.  The current list incl
 #define UPDATE_PID     'u'
 #define DIGITAL_WRITE  'w'
 #define ANALOG_WRITE   'x'
+#define READ_PID_OUTPUT'z'
 </pre>
 
 For example, to get the analog reading on pin 3, use the command:
@@ -213,6 +214,9 @@ To move the robot forward at 20 encoder ticks per second:
 
 m 20 20
 
+To get the computed P,I,D terms, and the output PWM command for each wheel, send:
+
+z
 
 Testing your Wiring Connections
 -------------------------------
@@ -389,7 +393,6 @@ You can also graph the range data using rxplot:
 
     $ rxplot -p 60 /arduino/sensor/ir_front_center/range
 
-
 Sending Twist Commands and Viewing Odometry Data
 ------------------------------------------------
 
@@ -413,7 +416,12 @@ To view odometry data:
 
 or
 
-   $ rxplot -p 60 /odom/pose/pose/position/x:y, /odom/twist/twist/linear/x, /odom/twist/twist/angular/z
+   $ rqt_plot -p 60 /odom/pose/pose/position/x:y, /odom/twist/twist/linear/x, /odom/twist/twist/angular/z
+
+PWM Tuning
+----------
+
+A good tutorial on PID tuning may be found [here](https://innovativecontrols.com/blog/basics-tuning-pid-loops). The computer P,I,D values are being broadcasted as topics of the form `/arduino/left/p_term`. For tuning, these topics may be plotted. For example, to plot P,I,D and output for the left wheel, you can use the command: `rqt_plot /arduino/left/p_term /arduino/left/i_term /arduino/left/d_term /arduino/left/pid_output`
 
 ROS Services
 ------------
