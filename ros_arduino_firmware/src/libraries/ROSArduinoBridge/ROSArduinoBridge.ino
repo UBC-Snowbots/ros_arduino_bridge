@@ -240,6 +240,19 @@ int runCommand() {
     Ko = pid_args[3];
     Serial.println("OK");
     break;
+  case READ_PID_OUTPUT:
+    // Get the PWM commands produced by the PID controller 
+    // (diff_controller)
+    Serial.print(leftPID.PTerm);Serial.print(" ");
+    Serial.print(leftPID.ITerm);Serial.print(" ");
+    Serial.print(leftPID.DTerm);Serial.print(" ");
+    Serial.print(leftPID.output);
+    Serial.print(" ");
+    Serial.print(rightPID.PTerm);Serial.print(" ");
+    Serial.print(rightPID.ITerm);Serial.print(" ");
+    Serial.print(rightPID.DTerm);Serial.print(" ");
+    Serial.println(rightPID.output);
+    break;
 #endif
   default:
     Serial.println(cmd);
