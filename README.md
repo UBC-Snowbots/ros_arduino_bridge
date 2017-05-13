@@ -81,7 +81,7 @@ Arduino IDE.
 
 Preparing your Serial Port under Linux
 --------------------------------------
-Your Arduino will likely connect to your Linux computer as port /dev/ttyACM# or /dev/ttyUSB# where # is a number like 0, 1, 2, etc., depending on how many other devices are connected.  The easiest way to make the determination is to unplug all other USB devices, plug in your Arduino, then run the command:
+Your Arduino will likely connect to your Linux computed as port /dev/ttyACM# or /dev/ttyUSB# where # is a number like 0, 1, 2, etc., depending on how many other devices are connected.  The easiest way to make the determination is to unplug all other USB devices, plug in your Arduino, then run the command:
 
     $ ls /dev/ttyACM*
 
@@ -421,7 +421,7 @@ or
 PWM Tuning
 ----------
 
-A good tutorial on PID tuning may be found [here](https://innovativecontrols.com/blog/basics-tuning-pid-loops). The computer P,I,D values are being broadcasted as topics of the form `/arduino/left/p_term`. For tuning, these topics may be plotted. For example, to plot P,I,D and output for the left wheel, you can use the command: `rqt_plot /arduino/left/p_term /arduino/left/i_term /arduino/left/d_term /arduino/left/pid_output`
+A good tutorial on PID tuning may be found [here](https://innovativecontrols.com/blog/basics-tuning-pid-loops). The computer P,I,D values are being broadcasted as topics of the form `/arduino/left/p_term`. For tuning these topics may be plotted. For example, to plot P,I,D and output for the left wheel, you can use the command: `rqt_plot /arduino/left/p_term /arduino/left/i_term /arduino/left/d_term /arduino/left/pid_output`
 
 ROS Services
 ------------
