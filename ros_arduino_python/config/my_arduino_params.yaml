@@ -3,7 +3,7 @@
 # For a wireless connection like XBee, the port is typically
 # /dev/ttyUSB# where # is a number such as 0, 1, 2, etc.
 
-port: /dev/ttyACM4
+port: /dev/ttyACM0
 baud: 57600
 timeout: 0.1
 
@@ -24,11 +24,22 @@ gear_reduction: 1.0
 motors_reversed: False
 
 # === PID parameters
-Kp: 100
+Kp: 8
 Kd: 0
-Ki: 32
-Ko: 40
+Ki: 0
+Ko: 4
 accel_limit: 1.0
+
+# === Odometry parameters
+# Whether or not to publish the odom -> base_frame transformation
+# Snowbots Note: We don't use this, because the EKF publishes this transform
+enable_odom_tf: False
+# Diagonal of the covriance matrix of the pose component of the odom message
+odom_pose_covariance_diagonal: 
+    [0.001, 0.001, 1000000.0, 1000000.0, 1000000.0, 0.03]
+# Diagonal of the covriance matrix of the twist component of the odom message
+odom_twist_covariance_diagonal:
+    [0.001, 0.001, 1000000.0, 1000000.0, 1000000.0, 0.03]
 
 # === Sensor definitions.  Examples only - edit for your robot.
 #     Sensor type can be one of the follow (case sensitive!):

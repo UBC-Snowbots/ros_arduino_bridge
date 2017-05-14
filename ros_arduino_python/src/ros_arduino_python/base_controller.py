@@ -40,7 +40,32 @@ class BaseController:
         self.rate = float(rospy.get_param("~base_controller_rate", 10))
         self.timeout = rospy.get_param("~base_controller_timeout", 1.0)
         self.stopped = False
+        self.pub_odom_tf = rospy.get_param("~enable_odom_tf", True)
                  
+        # Get the pose and twist covariance matrices
+        pose_cov_diagonal = rospy.\
+            get_param("~odom_pose_covariance_diagonal", [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        self.odom_pose_covariance_matrix =\
+            [
+                pose_cov_diagonal[0], 0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0, pose_cov_diagonal[1], 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, pose_cov_diagonal[2], 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, pose_cov_diagonal[3], 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0, pose_cov_diagonal[4], 0.0,
+                0.0, 0.0, 0.0, 0.0, 0.0, pose_cov_diagonal[5]
+            ]
+        twist_cov_diagonal = rospy.\
+            get_param("~odom_twist_covariance_diagonal", [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        self.odom_twist_covariance_matrix =\
+            [
+                twist_cov_diagonal[0], 0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0, twist_cov_diagonal[1], 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, twist_cov_diagonal[2], 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, twist_cov_diagonal[3], 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0, twist_cov_diagonal[4], 0.0,
+                0.0, 0.0, 0.0, 0.0, 0.0, twist_cov_diagonal[5]
+            ]
+
         pid_params = dict()
         pid_params['wheel_diameter'] = rospy.get_param("~wheel_diameter", "") 
         pid_params['wheel_track'] = rospy.get_param("~wheel_track", "")
@@ -204,13 +229,14 @@ class BaseController:
             quaternion.w = cos(self.th / 2.0)
     
             # Create the odometry transform frame broadcaster.
-            self.odomBroadcaster.sendTransform(
-                (self.x, self.y, 0), 
-                (quaternion.x, quaternion.y, quaternion.z, quaternion.w),
-                rospy.Time.now(),
-                self.base_frame,
-                "odom"
-                )
+            if (self.pub_odom_tf):
+                self.odomBroadcaster.sendTransform(
+                    (self.x, self.y, 0), 
+                    (quaternion.x, quaternion.y, quaternion.z, quaternion.w),
+                    rospy.Time.now(),
+                    self.base_frame,
+                    "odom"
+                    )
     
             odom = Odometry()
             odom.header.frame_id = "odom"
@@ -219,10 +245,12 @@ class BaseController:
             odom.pose.pose.position.x = self.x
             odom.pose.pose.position.y = self.y
             odom.pose.pose.position.z = 0
+            odom.pose.covariance = self.odom_twist_covariance_matrix
             odom.pose.pose.orientation = quaternion
             odom.twist.twist.linear.x = vxy
             odom.twist.twist.linear.y = 0
             odom.twist.twist.angular.z = vth
+            odom.twist.covariance = self.odom_twist_covariance_matrix
 
             self.odomPub.publish(odom)
             
