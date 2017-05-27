@@ -35,7 +35,7 @@ void DirectMotorControl::servo_write(Servo& motor, int throttle) {
   // note if using the Servo library to do PWM produces issues
   // alternate implementations can be found here: http://www.circuitstoday.com/pwm-generation-and-control-using-arduino 
   throttle = constrain(throttle, 0, 180);
-  throttle = map(throttle, 0, 180, 1350, 1650); 
+  throttle = map(throttle, 0, 180, 1000, 2000); 
   motor.writeMicroseconds(throttle);
 }
 

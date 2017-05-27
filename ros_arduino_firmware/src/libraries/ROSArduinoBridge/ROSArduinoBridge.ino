@@ -74,6 +74,7 @@
 
 /* Maximum PWM signal */
 #define MAX_PWM        90
+#define STOP            0
 
 #if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
@@ -128,6 +129,29 @@
   long lastMotorCommand = AUTO_STOP_INTERVAL;
 #endif
 
+enum rc_pins {
+  unused = 6,   // Channel 1
+  throttle = 7, // Channel 2
+  mode = 8,     // Channel 3
+  turn = 9,     // Channel 4
+};
+
+enum robot_state {
+  remote,
+  automatic,
+  stop,
+};
+
+robot_state current_state;
+
+// TODO: Figure out what this really is for
+int linearXHigh = 0, linearXLow = 0, angularZHigh = 0, angularZLow = 0;
+int linear_x = 0, angular_y = 0;
+int throttle_val = 0, turn_val = 0, mode_val = 0;
+
+#define TRIM              8
+#define JOYSTICK_MARGIN   50
+
 /* Variable initialization */
 
 // A pair of varibles to help parse serial commands (thanks Fergs)
@@ -167,7 +191,7 @@ int runCommand() {
   int pid_args[4];
   arg1 = atoi(argv1);
   arg2 = atoi(argv2);
-  
+  Serial.print("arg1: ");Serial.print(argv1);Serial.print("| arg2: ");Serial.println(argv2);
   switch(cmd) {
   case GET_BAUDRATE:
     Serial.println(BAUDRATE);
@@ -180,7 +204,7 @@ int runCommand() {
     break;
   case ANALOG_WRITE:
     analogWrite(arg1, arg2);
-    Serial.println("OK"); 
+    Serial.println("OK");
     break;
   case DIGITAL_WRITE:
     if (arg2 == 0) digitalWrite(arg1, LOW);
@@ -234,10 +258,12 @@ int runCommand() {
        pid_args[i] = atoi(str);
        i++;
     }
+    
     Kp = pid_args[0];
     Kd = pid_args[1];
     Ki = pid_args[2];
     Ko = pid_args[3];
+    Serial.print(Kp);Serial.print(" ");Serial.print(Kd);Serial.print(" ");Serial.println(Ko);
     Serial.println("OK");
     break;
   case READ_PID_OUTPUT:
@@ -296,6 +322,14 @@ void setup() {
           servoInitPosition[i]);
     }
   #endif
+
+  /* Sets up the RC control */
+  pinMode(unused, INPUT);
+  pinMode(throttle, INPUT);
+  pinMode(turn, INPUT);
+  pinMode(mode, INPUT);
+  set_offset();
+
 }
 
 /* Enter the main loop.  Read and parse input from the serial port
@@ -303,66 +337,127 @@ void setup() {
    interval and check for auto-stop conditions.
 */
 void loop() {
-  while (Serial.available() > 0) {
+ // Serial.print("Current state: ");Serial.println(current_state);
+  rc_read();
+
+  if (current_state == automatic) {
+    while (Serial.available() > 0) {  
+      // Read the next character
+      chr = Serial.read();
+      // Terminate a command with a CR
+      if (chr == 13) {
+        if (arg == 1) argv1[index] = NULL;
+        else if (arg == 2) argv2[index] = NULL;
+        runCommand();
+        resetCommand();
+      }
+      // Use spaces to delimit parts of the command
+      else if (chr == ' ') {
+        // Step through the arguments
+        if (arg == 0) arg = 1;
+        else if (arg == 1)  {
+          argv1[index] = NULL;
+          arg = 2;
+          index = 0;
+        }
+        continue;
+      }
+      else {
+        if (arg == 0) {
+          // The first arg is the single-letter command
+          cmd = chr;
+        }
+        else if (arg == 1) {
+          // Subsequent arguments can be more than one character
+          argv1[index] = chr;
+          index++;
+        }
+        else if (arg == 2) {
+          argv2[index] = chr;
+          index++;
+        }
+      }
+    }
+
+  // If we are using base control, run a PID calculation at the appropriate intervals
+  #ifdef USE_BASE
+    if (millis() > nextPID) {
+      updatePID();
+      nextPID += PID_INTERVAL;
+    }
     
-    // Read the next character
-    chr = Serial.read();
+    // Check to see if we have exceeded the auto-stop interval
+    if ((millis() - lastMotorCommand) > AUTO_STOP_INTERVAL) {;
+      setMotorSpeeds(0, 0);
+      moving = 0;
+    }
+  #endif
 
-    // Terminate a command with a CR
-    if (chr == 13) {
-      if (arg == 1) argv1[index] = NULL;
-      else if (arg == 2) argv2[index] = NULL;
-      runCommand();
-      resetCommand();
+  // Sweep servos
+  #ifdef USE_SERVOS
+    int i;
+    for (i = 0; i < N_SERVOS; i++) {
+      servos[i].doSweep();
     }
-    // Use spaces to delimit parts of the command
-    else if (chr == ' ') {
-      // Step through the arguments
-      if (arg == 0) arg = 1;
-      else if (arg == 1)  {
-        argv1[index] = NULL;
-        arg = 2;
-        index = 0;
-      }
-      continue;
-    }
-    else {
-      if (arg == 0) {
-        // The first arg is the single-letter command
-        cmd = chr;
-      }
-      else if (arg == 1) {
-        // Subsequent arguments can be more than one character
-        argv1[index] = chr;
-        index++;
-      }
-      else if (arg == 2) {
-        argv2[index] = chr;
-        index++;
-      }
-    }
-  }
-  
-// If we are using base control, run a PID calculation at the appropriate intervals
-#ifdef USE_BASE
-  if (millis() > nextPID) {
-    updatePID();
-    nextPID += PID_INTERVAL;
-  }
-  
-  // Check to see if we have exceeded the auto-stop interval
-  if ((millis() - lastMotorCommand) > AUTO_STOP_INTERVAL) {;
-    setMotorSpeeds(0, 0);
-    moving = 0;
-  }
-#endif
+  #endif
 
-// Sweep servos
-#ifdef USE_SERVOS
-  int i;
-  for (i = 0; i < N_SERVOS; i++) {
-    servos[i].doSweep();
   }
-#endif
+  else if (current_state == remote) {
+    int left_throttle = linear_x + angular_y;
+    int right_throttle = linear_x - angular_y;
+
+    setMotorSpeeds(left_throttle, right_throttle);
+  } else if (current_state == stop) {
+    setMotorSpeeds(STOP, STOP);
+  }
+  else {
+    // Should never be here
+    setMotorSpeeds(STOP, STOP);
+  }
 }
 
+void rc_read() {
+  throttle_val = pulseIn(throttle, HIGH);
+  turn_val = pulseIn(turn, HIGH);
+  mode_val = pulseIn(mode, HIGH);
+
+  if (throttle_val < linearXHigh && throttle_val > linearXLow) 
+    linear_x = STOP;
+  else // TODO: Check if this can take negative values, then max out at -90&90
+    linear_x = map (throttle_val, 949, 1700, -MAX_PWM/2, MAX_PWM/2);
+  if (turn_val < angularZHigh && turn_val > angularZLow) 
+    angular_y = STOP;
+  else
+    angular_y = map (turn_val, 949, 1700, -MAX_PWM/4, MAX_PWM/4);
+  
+  
+  if (mode_val < 1200) 
+    current_state = stop; // STOP mode
+  else if (1200 <= mode_val && mode_val < 1600) {
+    resetEncoders();
+    resetPID();
+    setMotorSpeeds(0,0);  
+    current_state = remote; // RC mode
+  } else if (1600 <= mode_val && mode_val < 2000) 
+    current_state = automatic; //auto mode 
+  else 
+    current_state = stop; // STOP mode
+    
+  // if joystick movement is not outside of the error range, assume no movement is desired
+  if (abs(linear_x) < TRIM)
+    linear_x = STOP;
+  if (abs(angular_y) < TRIM)
+    angular_y = STOP;
+
+}
+
+void set_offset() {
+  int linear_x_mid = 1325;
+  int angular_z_mid = 1325; // Radio signal midpoints
+
+  linearXHigh = linear_x_mid + JOYSTICK_MARGIN;
+  linearXLow = linear_x_mid - JOYSTICK_MARGIN;
+
+  angularZHigh = angular_z_mid + JOYSTICK_MARGIN;
+  angularZLow = angular_z_mid - JOYSTICK_MARGIN;
+}
