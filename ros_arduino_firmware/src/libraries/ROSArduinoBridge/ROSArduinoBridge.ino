@@ -156,7 +156,6 @@ robot_state current_state;
 // TODO: Figure out what this really is for
 int linearXHigh = 0, linearXLow = 0, angularZHigh = 0, angularZLow = 0;
 int linear_x = 0, angular_y = 0;
-int throttle_val = 0, turn_val = 0, mode_val = 0;
 
 #define TRIM              8
 #define JOYSTICK_MARGIN   50
@@ -376,6 +375,7 @@ void loop() {
     }
 
     while (Serial.available() > 0) {  
+
       // Read the next character
       chr = Serial.read();
       // Terminate a command with a CR
@@ -439,10 +439,13 @@ void loop() {
   else if (current_state == remote) {
     int left_throttle = linear_x + angular_y;
     int right_throttle = linear_x - angular_y;
-
     setMotorSpeeds(left_throttle, right_throttle);
+    resetPID();
+    Serial.flushRX();
   } else if (current_state == stop) {
+    Serial.println("STOPPING");
     setMotorSpeeds(STOP, STOP);
+    Serial.flushRX();
   }
   else {
     // Should never be here
@@ -451,9 +454,9 @@ void loop() {
 }
 
 void rc_read() {
-  throttle_val = pulseIn(throttle, HIGH);
-  turn_val = pulseIn(turn, HIGH);
-  mode_val = pulseIn(mode, HIGH);
+  int throttle_val = pulseIn(throttle, HIGH);
+  int turn_val = pulseIn(turn, HIGH);
+  int mode_val = pulseIn(mode, HIGH);
 
   if (throttle_val < linearXHigh && throttle_val > linearXLow) 
     linear_x = STOP;
@@ -468,8 +471,6 @@ void rc_read() {
   if (mode_val < 1200) 
     current_state = stop; // STOP mode
   else if (1200 <= mode_val && mode_val < 1600) {
-    resetEncoders();
-    resetPID();
     setMotorSpeeds(0,0);  
     current_state = remote; // RC mode
   } else if (1600 <= mode_val && mode_val < 2000) 
@@ -482,7 +483,6 @@ void rc_read() {
     linear_x = STOP;
   if (abs(angular_y) < TRIM)
     angular_y = STOP;
-
 }
 
 void set_offset() {
