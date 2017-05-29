@@ -129,6 +129,15 @@
   long lastMotorCommand = AUTO_STOP_INTERVAL;
 #endif
 
+// LED STRIP CONSTANTS
+#define LED_STRIP 13
+
+const long BLINK_INTERVAL = 1000;
+// Variables that will change
+int ledStripState = LOW;  // led strip state used to set the LED
+unsigned long previousMillis = 0; // will store last time LED was updated
+
+
 enum rc_pins {
   unused = 6,   // Channel 1
   throttle = 7, // Channel 2
@@ -322,6 +331,9 @@ void setup() {
     }
   #endif
 
+  /* Sets up the led strip */
+  pinMode(LED_STRIP, OUTPUT);
+
   /* Sets up the RC control */
   pinMode(unused, INPUT);
   pinMode(throttle, INPUT);
@@ -340,9 +352,30 @@ void loop() {
   rc_read();
 
   if (current_state == automatic) {
+    
+    // check to see if it's time to blink the LED; that is, if the
+    // difference between the current time and last time you blinked
+    // the LED is bigger than the interval at which you want to
+    // blink the LED.
+    unsigned long currentMillis = millis();
 
-    while (Serial.available() > 0) {
-      
+    if (currentMillis - previousMillis >= BLINK_INTERVAL) {
+      // save the last time you blinked the LED
+      previousMillis = currentMillis;
+
+      // if the LED is off turn it on and vice-versa:
+      if (ledStripState == LOW) {
+        ledStripState = HIGH;
+      } else {
+        ledStripState = LOW;
+      }
+
+      // set the LED with the ledState of the variable:
+      digitalWrite(LED_STRIP, ledStripState);
+    }
+
+    while (Serial.available() > 0) {  
+
       // Read the next character
       chr = Serial.read();
       // Terminate a command with a CR
