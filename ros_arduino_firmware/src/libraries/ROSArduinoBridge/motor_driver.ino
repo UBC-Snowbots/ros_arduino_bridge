@@ -83,6 +83,8 @@
   
    // A convenience function for setting both motor speeds
   void setMotorSpeeds(int leftSpeed, int rightSpeed) {
+    Serial.print("LEFT: ");Serial.print(leftSpeed);
+    Serial.print("| RIGHT: ");Serial.println(rightSpeed);
     setMotorSpeed(LEFT, leftSpeed);
     setMotorSpeed(RIGHT, rightSpeed);
   }

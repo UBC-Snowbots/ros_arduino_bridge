@@ -407,12 +407,8 @@ void loop() {
     int left_throttle = linear_x + angular_y;
     int right_throttle = linear_x - angular_y;
     setMotorSpeeds(left_throttle, right_throttle);
-    resetPID();
-    Serial.flushRX();
   } else if (current_state == stop) {
-    Serial.println("STOPPING");
     setMotorSpeeds(STOP, STOP);
-    Serial.flushRX();
   }
   else {
     // Should never be here
@@ -424,6 +420,7 @@ void rc_read() {
   int throttle_val = pulseIn(throttle, HIGH);
   int turn_val = pulseIn(turn, HIGH);
   int mode_val = pulseIn(mode, HIGH);
+  robot_state next_state;
 
   if (throttle_val < linearXHigh && throttle_val > linearXLow) 
     linear_x = STOP;
@@ -434,22 +431,27 @@ void rc_read() {
   else
     angular_y = map (turn_val, 949, 1700, -MAX_PWM/4, MAX_PWM/4);
   
-  
-  if (mode_val < 1200) 
-    current_state = stop; // STOP mode
-  else if (1200 <= mode_val && mode_val < 1600) {
-    setMotorSpeeds(0,0);  
-    current_state = remote; // RC mode
-  } else if (1600 <= mode_val && mode_val < 2000) 
-    current_state = automatic; //auto mode 
-  else 
-    current_state = stop; // STOP mode
-    
   // if joystick movement is not outside of the error range, assume no movement is desired
   if (abs(linear_x) < TRIM)
     linear_x = STOP;
   if (abs(angular_y) < TRIM)
     angular_y = STOP;
+
+  if (mode_val < 1200) 
+    next_state = stop; // STOP mode
+  else if (1200 <= mode_val && mode_val < 1600) {
+    next_state = remote; // RC mode
+  } else if (1600 <= mode_val && mode_val < 2000) 
+    next_state = automatic; //auto mode 
+  else 
+    next_state = stop; // STOP mode
+    
+  if (current_state != next_state) {
+    Serial.println("Switched states!");
+    resetPID();
+    current_state = next_state;
+  }
+
 }
 
 void set_offset() {
