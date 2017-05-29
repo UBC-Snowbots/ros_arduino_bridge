@@ -41,14 +41,14 @@ class Arduino:
     def __init__(self, port="/dev/ttyUSB0", baudrate=57600, timeout=0.5):
         
         self.PID_RATE = 10 # Do not change this!  It is a fixed property of the Arduino PID controller.
-        self.PID_INTERVAL = 1000 / 30
+        self.PID_INTERVAL = 1000 / self.PID_RATE
         
         self.port = port
         self.baudrate = baudrate
         self.timeout = timeout
         self.encoder_count = 0
         self.writeTimeout = timeout
-        self.interCharTimeout = timeout / 30.
+        self.interCharTimeout = timeout / self.PID_RATE.
     
         # Keep things thread safe
         self.mutex = thread.allocate_lock()
