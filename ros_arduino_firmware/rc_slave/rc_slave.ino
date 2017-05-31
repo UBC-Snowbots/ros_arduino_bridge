@@ -51,6 +51,9 @@ int prev_angular_z = 0;
 
 // these variables will store the joystick ranges - used to figure out direction, turn etc
 int linearXHigh = 0, linearXLow = 0, angularZHigh = 0, angularZLow = 0;
+int left_throttle = 0; int right_throttle = 0; 
+char msg[10];
+
 
 void setup() {
 
@@ -105,17 +108,18 @@ void set_offset() {
 * Read in from RC controller. Mode and speed are determined here.
 */
 void rc_read() {
-  noInterrupts();
+  
   int throttle_val = pulseIn(throttle, HIGH);
   int turn_val = pulseIn(turn, HIGH);
   int mode_val = pulseIn(mode, HIGH);
-  interrupts();
-  // Debug RC inputs
   
+  // Debug RC inputs
+  /*
   Serial.print("Throttle: ");Serial.print(throttle_val);
   Serial.print("\t| Turn: ");Serial.print(turn_val);
   Serial.print("\t| Mode: ");Serial.println(mode_val);
-  
+  */
+
   if (throttle_val < linearXHigh && throttle_val > linearXLow)
     linear_x = STOP_SPEED;
   else
@@ -148,14 +152,9 @@ void rc_read() {
   Serial.print("\t| Turn: ");Serial.print(angular_z);
   Serial.print("\t| Mode: ");Serial.println(current_state);
   */
-  req_event();
-}
-
-
-// moves the robot. Turning is taken into account
- void package_msg(int linear_speed, int angular_speed){
-  int left_throttle = linear_speed + angular_speed;
-  int right_throttle = linear_speed - angular_speed;
+  
+  left_throttle = linear_x + angular_z;
+  right_throttle = linear_x - angular_z;
   
   if (left_throttle > MAX_SPEED) {
     left_throttle = MAX_SPEED;
@@ -169,19 +168,24 @@ void rc_read() {
     right_throttle = -MAX_SPEED;
   }
 
-  char msg[10];
-  //sprintf(msg,"m %d %d\r", left_throttle, right_throttle);
-  //Serial.print(msg);
-  //Serial.println("");
-  //Serial.print(left_throttle);Serial.print("  |  ");Serial.println(right_throttle);
+}
+
+
+// moves the robot. Turning is taken into account
+ void package_msg(int linear_speed, int angular_speed){
+  sprintf(msg,"m %d %d\r", linear_speed, angular_speed);
+  /* Message Packaging Debug 
+  Serial.print(msg);
+  Serial.println("");
+  Serial.print(left_throttle);Serial.print("  |  ");Serial.println(right_throttle);
+  */
   Wire.write(msg);
-  delay(10);
 }
 
 void req_event(){
     if (current_state == stop ) {
         package_msg(0, 0);
     } else {
-        package_msg(linear_x, angular_z);
+        package_msg(left_throttle, right_throttle);
     }
 }

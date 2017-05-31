@@ -74,6 +74,7 @@
 
 /* Maximum PWM signal */
 #define MAX_PWM        90
+#define STOP            0
 
 #if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
@@ -128,6 +129,8 @@
   long lastMotorCommand = AUTO_STOP_INTERVAL;
 #endif
 
+#include <Wire.h>
+
 /* Variable initialization */
 
 // A pair of varibles to help parse serial commands (thanks Fergs)
@@ -148,6 +151,25 @@ char argv2[16];
 long arg1;
 long arg2;
 
+
+// RC_Slave Arduino setup
+
+// If pin 6 is HIGH, we take input from Serial (Laptop)
+// If pin 6 is LOW, we take input from I2C from Wire (RC_Slave)
+//    In this case, we send it a request character, and use that to send motor commands
+const int RC_PIN = 6;
+
+// Size of payload being sent from the RC_Slave Arduino
+const int BUFFER_SIZE = 10;
+
+
+enum robot_state {
+  autonomous,
+  controlled
+};
+
+robot_state current_state;
+
 /* Clear the current command parameters */
 void resetCommand() {
   cmd = NULL;
@@ -167,7 +189,7 @@ int runCommand() {
   int pid_args[4];
   arg1 = atoi(argv1);
   arg2 = atoi(argv2);
-  
+  Serial.print("arg1: ");Serial.print(argv1);Serial.print("| arg2: ");Serial.println(argv2);
   switch(cmd) {
   case GET_BAUDRATE:
     Serial.println(BAUDRATE);
@@ -180,7 +202,7 @@ int runCommand() {
     break;
   case ANALOG_WRITE:
     analogWrite(arg1, arg2);
-    Serial.println("OK"); 
+    Serial.println("OK");
     break;
   case DIGITAL_WRITE:
     if (arg2 == 0) digitalWrite(arg1, LOW);
@@ -234,10 +256,12 @@ int runCommand() {
        pid_args[i] = atoi(str);
        i++;
     }
+    
     Kp = pid_args[0];
     Kd = pid_args[1];
     Ki = pid_args[2];
     Ko = pid_args[3];
+    Serial.print(Kp);Serial.print(" ");Serial.print(Kd);Serial.print(" ");Serial.println(Ko);
     Serial.println("OK");
     break;
   case READ_PID_OUTPUT:
@@ -267,82 +291,113 @@ void setup() {
 
 // Initialize the motor controller if used */
 #ifdef USE_BASE
-  #ifdef ARDUINO_ENC_COUNTER
-    // Left encoder
-    pinMode(c_LeftEncoderPinA, INPUT);      // sets pin A as input
-    digitalWrite(c_LeftEncoderPinA, LOW);  // turn on pullup resistors
-    pinMode(c_LeftEncoderPinB, INPUT);      // sets pin B as input
-    digitalWrite(c_LeftEncoderPinB, LOW);  // turn on pullup resistors
-    attachInterrupt(c_LeftEncoderInterrupt, HandleLeftMotorInterruptA, RISING);
-   
-    // Right encoder
-    pinMode(c_RightEncoderPinA, INPUT);      // sets pin A as input
-    digitalWrite(c_RightEncoderPinA, LOW);  // turn on pullup resistors
-    pinMode(c_RightEncoderPinB, INPUT);      // sets pin B as input
-    digitalWrite(c_RightEncoderPinB, LOW);  // turn on pullup resistors
-    attachInterrupt(c_RightEncoderInterrupt, HandleRightMotorInterruptA, RISING);
-  #endif
-  initMotorController();
-  resetPID();
+#ifdef ARDUINO_ENC_COUNTER
+  // Left encoder
+  pinMode(c_LeftEncoderPinA, INPUT);      // sets pin A as input
+  digitalWrite(c_LeftEncoderPinA, LOW);  // turn on pullup resistors
+  pinMode(c_LeftEncoderPinB, INPUT);      // sets pin B as input
+  digitalWrite(c_LeftEncoderPinB, LOW);  // turn on pullup resistors
+  attachInterrupt(c_LeftEncoderInterrupt, HandleLeftMotorInterruptA, RISING);
+  
+  // Right encoder
+  pinMode(c_RightEncoderPinA, INPUT);      // sets pin A as input
+  digitalWrite(c_RightEncoderPinA, LOW);  // turn on pullup resistors
+  pinMode(c_RightEncoderPinB, INPUT);      // sets pin B as input
+  digitalWrite(c_RightEncoderPinB, LOW);  // turn on pullup resistors
+  attachInterrupt(c_RightEncoderInterrupt, HandleRightMotorInterruptA, RISING);
+#endif
+initMotorController();
+resetPID();
 #endif
 
 /* Attach servos if used */
-  #ifdef USE_SERVOS
-    int i;
-    for (i = 0; i < N_SERVOS; i++) {
-      servos[i].initServo(
-          servoPins[i],
-          stepDelay[i],
-          servoInitPosition[i]);
-    }
-  #endif
+#ifdef USE_SERVOS
+  int i;
+  for (i = 0; i < N_SERVOS; i++) {
+    servos[i].initServo(
+        servoPins[i],
+        stepDelay[i],
+        servoInitPosition[i]);
+  }
+#endif
+
+  // Setting up the I2C with slave
+  Wire.begin();
+
+  // I2C/USB Serial triggers
+  pinMode(RC_PIN, INPUT);
+
 }
 
 /* Enter the main loop.  Read and parse input from the serial port
-   and run any valid commands. Run a PID calculation at the target
-   interval and check for auto-stop conditions.
+  and run any valid commands. Run a PID calculation at the target
+  interval and check for auto-stop conditions.
 */
 void loop() {
-  while (Serial.available() > 0) {
-    
-    // Read the next character
-    chr = Serial.read();
 
-    // Terminate a command with a CR
-    if (chr == 13) {
-      if (arg == 1) argv1[index] = NULL;
-      else if (arg == 2) argv2[index] = NULL;
-      runCommand();
-      resetCommand();
+  // Sets the robot state depending on RC_Slave input pin
+  getRobotState();
+  if (current_state == autonomous) {
+    Serial.println("AUTONOMOUS");
+    while (Serial.available() > 0) {
+      // Read the next character
+      chr = Serial.read();
+      // Terminate a command with a CR
+      if (chr == 13) {
+        if (arg == 1) argv1[index] = NULL;
+        else if (arg == 2) argv2[index] = NULL;
+        runCommand();
+        resetCommand();
+      }
+      // Use spaces to delimit parts of the command
+      else if (chr == ' ') {
+        // Step through the arguments
+        if (arg == 0) arg = 1;
+        else if (arg == 1)  {
+          argv1[index] = NULL;
+          arg = 2;
+          index = 0;
+        }
+        continue;
+      }
+      else {
+        if (arg == 0) {
+          // The first arg is the single-letter command
+          cmd = chr;
+        }
+        else if (arg == 1) {
+          // Subsequent arguments can be more than one character
+          argv1[index] = chr;
+          index++;
+        }
+        else if (arg == 2) {
+          argv2[index] = chr;
+          index++;
+        }
+      }
     }
-    // Use spaces to delimit parts of the command
-    else if (chr == ' ') {
-      // Step through the arguments
-      if (arg == 0) arg = 1;
-      else if (arg == 1)  {
-        argv1[index] = NULL;
-        arg = 2;
-        index = 0;
+  } else {
+    if (Wire.requestFrom(1, BUFFER_SIZE) == BUFFER_SIZE) {
+        int i = 0;
+        for (; i < BUFFER_SIZE; i++){
+          char ch = Wire.read();
+          if (ch == '\r') {
+            // "Flush" the buffer
+            while (Wire.available() > 0) {
+              Wire.read();
+            }
+            Serial.println("");
+            delay(20);
+            break;
+          } else {
+            Serial.print(ch);
+          }
+        }
+      } else {
+        Serial.println("ERROR: Unexpected buffer size");
       }
-      continue;
-    }
-    else {
-      if (arg == 0) {
-        // The first arg is the single-letter command
-        cmd = chr;
-      }
-      else if (arg == 1) {
-        // Subsequent arguments can be more than one character
-        argv1[index] = chr;
-        index++;
-      }
-      else if (arg == 2) {
-        argv2[index] = chr;
-        index++;
-      }
-    }
   }
-  
+
 // If we are using base control, run a PID calculation at the appropriate intervals
 #ifdef USE_BASE
   if (millis() > nextPID) {
@@ -366,3 +421,9 @@ void loop() {
 #endif
 }
 
+void getRobotState() {
+  if (digitalRead(RC_PIN))
+    current_state = autonomous;
+  else
+    current_state = controlled;
+}
