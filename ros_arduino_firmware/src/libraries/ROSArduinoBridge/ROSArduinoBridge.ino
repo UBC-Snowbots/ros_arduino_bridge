@@ -411,6 +411,10 @@ void loop() {
       }
     }
   } else {
+    
+    ledState = HIGH;
+    digitalWrite(ledPin, ledState);
+    
     if (Wire.requestFrom(1, BUFFER_SIZE) == BUFFER_SIZE) {
         int i = 0;
         for (; i < BUFFER_SIZE; i++){
