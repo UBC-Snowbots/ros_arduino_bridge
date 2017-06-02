@@ -59,7 +59,6 @@ int throttle_ind = 0; int turn_ind = 0;
 
 
 void setup() {
-
   Serial.begin(BAUD_RATE);
   Wire.begin(1);
   TWBR = 12;
@@ -201,10 +200,10 @@ void rc_read() {
   } else if (right_throttle < -MAX_SPEED) {
     right_throttle = -MAX_SPEED;
   }
-  
+  /*
   Serial.print("Left Throttle: ");Serial.print(left_throttle);
   Serial.print("| Right Throttle: ");Serial.println(right_throttle);
-
+  */
   noInterrupts();
   sprintf(msg,"m %d %d\r", left_throttle, right_throttle);
   interrupts();
@@ -218,7 +217,7 @@ void rc_read() {
     return;
   }
   Wire.write(msg);
-}
+}  
 
 void req_event(){
     if (current_state == stop ) {

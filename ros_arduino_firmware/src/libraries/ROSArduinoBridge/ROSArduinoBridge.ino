@@ -338,7 +338,6 @@ void loop() {
   // Sets the robot state depending on RC_Slave input pin
   getRobotState();
   if (current_state == autonomous) {
-    Serial.println("AUTONOMOUS");
     while (Serial.available() > 0) {
       // Read the next character
       chr = Serial.read();
@@ -380,6 +379,8 @@ void loop() {
     if (Wire.requestFrom(1, BUFFER_SIZE) == BUFFER_SIZE) {
         int i = 0;
         for (; i < BUFFER_SIZE; i++){
+          
+          // ---- CHARACTER DEBUG BLOCK ----
           /*
           char ch = Wire.read();
           if (ch == '\r') {
@@ -388,19 +389,25 @@ void loop() {
               Wire.read();
             }
             Serial.println("");
-            delay(30);
+            delay(20);
             break;
           } else {
             Serial.print(ch);
           }
           */
-
+          // ---- CHARACTER DEBUG BLOCK ----
+          
+          // ---- MAIN FUNCTIONAL BLOCK ----
           // Read the next character
-          chr = Serial.read();
+          chr = Wire.read();
           // Terminate a command with a CR
           if (chr == 13) {
             if (arg == 1) argv1[index] = NULL;
             else if (arg == 2) argv2[index] = NULL;
+            while (Wire.available() > 0) {
+              Wire.read();
+              i++;
+            }
             runCommand();
             resetCommand();
           }
@@ -430,6 +437,8 @@ void loop() {
               index++;
             }
           }
+          
+          // ---- MAIN FUNCTIONAL BLOCK ---- 
 
         }
       } else {
