@@ -380,6 +380,7 @@ void loop() {
     if (Wire.requestFrom(1, BUFFER_SIZE) == BUFFER_SIZE) {
         int i = 0;
         for (; i < BUFFER_SIZE; i++){
+          /*
           char ch = Wire.read();
           if (ch == '\r') {
             // "Flush" the buffer
@@ -392,6 +393,44 @@ void loop() {
           } else {
             Serial.print(ch);
           }
+          */
+
+          // Read the next character
+          chr = Serial.read();
+          // Terminate a command with a CR
+          if (chr == 13) {
+            if (arg == 1) argv1[index] = NULL;
+            else if (arg == 2) argv2[index] = NULL;
+            runCommand();
+            resetCommand();
+          }
+          // Use spaces to delimit parts of the command
+          else if (chr == ' ') {
+            // Step through the arguments
+            if (arg == 0) arg = 1;
+            else if (arg == 1)  {
+              argv1[index] = NULL;
+              arg = 2;
+              index = 0;
+            }
+            continue;
+          }
+          else {
+            if (arg == 0) {
+              // The first arg is the single-letter command
+              cmd = chr;
+            }
+            else if (arg == 1) {
+              // Subsequent arguments can be more than one character
+              argv1[index] = chr;
+              index++;
+            }
+            else if (arg == 2) {
+              argv2[index] = chr;
+              index++;
+            }
+          }
+
         }
       } else {
         Serial.println("ERROR: Unexpected buffer size");
