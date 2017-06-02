@@ -202,7 +202,6 @@ int runCommand() {
   int pid_args[4];
   arg1 = atoi(argv1);
   arg2 = atoi(argv2);
-  Serial.print("arg1: ");Serial.print(argv1);Serial.print("| arg2: ");Serial.println(argv2);
   switch(cmd) {
   case GET_BAUDRATE:
     Serial.println(BAUDRATE);
