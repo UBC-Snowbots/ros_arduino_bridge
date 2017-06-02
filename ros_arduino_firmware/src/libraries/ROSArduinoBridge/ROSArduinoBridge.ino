@@ -323,7 +323,7 @@ resetPID();
 
   // Setting up the I2C with slave
   Wire.begin();
-
+  TWBR = 12;
   // I2C/USB Serial triggers
   pinMode(RC_PIN, INPUT);
 
@@ -387,7 +387,7 @@ void loop() {
               Wire.read();
             }
             Serial.println("");
-            delay(20);
+            delay(30);
             break;
           } else {
             Serial.print(ch);

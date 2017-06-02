@@ -13,7 +13,7 @@
 
 // RC Joystick variables & tuning
 // Might be easier to tune the RC itself
-const int JOYSTICK_MARGIN = 80;
+const int JOYSTICK_MARGIN = 50;
 const int THROTTLE_PULSE_MIN = 949;
 const int THROTTLE_PULSE_MAX = 1700;
 //const int THROTTLE_PULSE_REST = 1325;
@@ -52,13 +52,17 @@ int prev_angular_z = 0;
 // these variables will store the joystick ranges - used to figure out direction, turn etc
 int linearXHigh = 0, linearXLow = 0, angularZHigh = 0, angularZLow = 0;
 int left_throttle = 0; int right_throttle = 0; 
+
 char msg[10];
+int throttle_buf[3]; int turn_buf[3];
+int throttle_ind = 0; int turn_ind = 0;
 
 
 void setup() {
 
   Serial.begin(BAUD_RATE);
   Wire.begin(1);
+  TWBR = 12;
   Wire.onRequest(req_event);
 
   pinMode(unused, INPUT);
@@ -112,6 +116,31 @@ void rc_read() {
   int throttle_val = pulseIn(throttle, HIGH);
   int turn_val = pulseIn(turn, HIGH);
   int mode_val = pulseIn(mode, HIGH);
+
+  throttle_buf[throttle_ind++] = throttle_val;
+  turn_buf[turn_ind++] = turn_val;
+
+  if (throttle_ind >= 3){
+    throttle_ind = 0;
+  }
+  
+  if (turn_ind >= 3){
+    turn_ind = 0;
+  }
+
+  int avg_throttle = 0;
+  int avg_turn = 0;
+
+  int i = 0;
+  for (;i < 3;i++){
+    avg_throttle += throttle_buf[i];
+    avg_turn += turn_buf[i];
+  }
+  
+  avg_throttle = avg_throttle / 3;
+  avg_turn = avg_turn / 3;
+
+
   
   // Debug RC inputs
   /*
@@ -120,15 +149,20 @@ void rc_read() {
   Serial.print("\t| Mode: ");Serial.println(mode_val);
   */
 
-  if (throttle_val < linearXHigh && throttle_val > linearXLow)
+  /*
+  Serial.print("Avg Throttle: ");Serial.print(avg_throttle);
+  Serial.print("\t| Avg Turn: ");Serial.println(avg_turn);
+  */
+
+  if (avg_throttle < linearXHigh && avg_throttle > linearXLow)
     linear_x = STOP_SPEED;
   else
-    linear_x = map(throttle_val, THROTTLE_PULSE_MIN, THROTTLE_PULSE_MAX, -MAX_SPEED, MAX_SPEED);
+    linear_x = map(avg_throttle, THROTTLE_PULSE_MIN, THROTTLE_PULSE_MAX, -MAX_SPEED, MAX_SPEED);
 
-  if (turn_val < angularZHigh && turn_val > angularZLow)
+  if (avg_turn < angularZHigh && avg_turn > angularZLow)
     angular_z = STOP_SPEED;
   else
-    angular_z = map(turn_val, TURN_PULSE_MIN, TURN_PULSE_MAX, -MAX_SPEED/2, MAX_SPEED/2);
+    angular_z = map(avg_turn, TURN_PULSE_MIN, TURN_PULSE_MAX, -MAX_SPEED/2, MAX_SPEED/2);
 
   // if joystick movement is not outside of the error range, assume no movement is desired
   if (abs(linear_x) < TRIM)
@@ -167,25 +201,29 @@ void rc_read() {
   } else if (right_throttle < -MAX_SPEED) {
     right_throttle = -MAX_SPEED;
   }
+  
+  Serial.print("Left Throttle: ");Serial.print(left_throttle);
+  Serial.print("| Right Throttle: ");Serial.println(right_throttle);
 
+  noInterrupts();
+  sprintf(msg,"m %d %d\r", left_throttle, right_throttle);
+  interrupts();
 }
 
 
 // moves the robot. Turning is taken into account
- void package_msg(int linear_speed, int angular_speed){
-  sprintf(msg,"m %d %d\r", linear_speed, angular_speed);
-  /* Message Packaging Debug 
-  Serial.print(msg);
-  Serial.println("");
-  Serial.print(left_throttle);Serial.print("  |  ");Serial.println(right_throttle);
-  */
+ void package_msg(bool stop){
+  if (stop) {
+    Wire.write("m 0 0\r");
+    return;
+  }
   Wire.write(msg);
 }
 
 void req_event(){
     if (current_state == stop ) {
-        package_msg(0, 0);
+        package_msg(true);
     } else {
-        package_msg(left_throttle, right_throttle);
+        package_msg(false);
     }
 }
